@@ -1,0 +1,28 @@
+# Claude / AI assistant files
+CLAUDE.md
+.claude/
+
+# Go
+bin/
+*.exe
+*.out
+vendor/
+
+# Environment / secrets
+.env
+.env.*
+*.pem
+*.key
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+
+# Misc
+*.tar.gz
+*.zip
+Zone.Identifier
