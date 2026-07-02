@@ -10,7 +10,6 @@ vendor/
 
 # Environment / secrets
 .env
-.env.*
 *.pem
 *.key
 
