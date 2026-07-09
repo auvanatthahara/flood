@@ -1,6 +1,10 @@
 # Claude / AI assistant files
 CLAUDE.md
+STRUCTURE.md
 .claude/
+
+# Scratch / local-only files
+scratch/
 
 # Go
 bin/
