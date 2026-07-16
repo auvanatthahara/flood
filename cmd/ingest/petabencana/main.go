@@ -48,11 +48,7 @@ type APIResponse struct {
 
 func main() {
 	var ctx context.Context = context.Background()
-
 	var dbURL string = os.Getenv("DATABASE_URL")
-	if dbURL == "" {
-		dbURL = "postgresql://flood:flood@localhost:5434/flood"
-	}
 
 	var conn, err = pgx.Connect(ctx, dbURL)
 	if err != nil {
