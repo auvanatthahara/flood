@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"os"
 
 	"github.com/jackc/pgx/v5"
 )
@@ -46,11 +47,24 @@ type APIResponse struct {
 }
 
 func main() {
-	var url string = "https://data.petabencana.id/reports?timeperiod=604800"
-	var resp, err = http.Get(url)
+	var ctx context.Context = context.Background()
 
+	var dbURL string = os.Getenv("DATABASE_URL")
+	if dbURL == "" {
+		dbURL = "postgresql://flood:flood@localhost:5434/flood"
+	}
+
+	var conn, err = pgx.Connect(ctx, dbURL)
 	if err != nil {
-		fmt.Println("Error:", err)
+		fmt.Println("Error connecting to database:", err)
+		return
+	}
+	defer conn.Close(ctx)
+
+	var url string = "https://data.petabencana.id/reports?timeperiod=18748800"
+	var resp, httpErr = http.Get(url)
+	if httpErr != nil {
+		fmt.Println("Error fetching API:", httpErr)
 		return
 	}
 	defer resp.Body.Close()
@@ -61,28 +75,21 @@ func main() {
 		return
 	}
 
-	var report Geometry = apiResp.Result.Objects.Output.Geometries[0]
+	var inserted int = 0
+	for _, report := range apiResp.Result.Objects.Output.Geometries {
+		if report.Properties.Tags.InstanceRegionCode != "ID-JK" {
+			continue
+		}
+		if insertReport(ctx, conn, report) {
+			inserted++
+		}
+	}
 
-	fmt.Println("ID:   ", report.Properties.Pkey)
-	fmt.Println("Time: ", report.Properties.CreatedAt)
-	fmt.Println("City: ", report.Properties.Tags.City)
-	fmt.Println("Lon:  ", report.Coordinates[0])
-	fmt.Println("Lat:  ", report.Coordinates[1])
-
-	insertReport(report)
+	fmt.Printf("Done. Inserted %d Jakarta reports.\n", inserted)
 }
 
-func insertReport(report Geometry) {
-	var ctx context.Context = context.Background()
-
-	var conn, err = pgx.Connect(ctx, "postgresql://flood:flood@localhost:5434/flood")
-	if err != nil {
-		fmt.Println("Error connecting to database:", err)
-		return
-	}
-	defer conn.Close(ctx)
-
-	_, err = conn.Exec(
+func insertReport(ctx context.Context, conn *pgx.Conn, report Geometry) bool {
+	_, err := conn.Exec(
 		ctx,
 		`INSERT INTO flood_reports (
 			source, source_id, created_at, status,
@@ -106,9 +113,9 @@ func insertReport(report Geometry) {
 		report.Properties.Text,
 	)
 	if err != nil {
-		fmt.Println("Error inserting report:", err)
-		return
+		fmt.Println("Error inserting report:", report.Properties.Pkey, err)
+		return false
 	}
 
-	fmt.Println("Inserted:", report.Properties.Pkey)
+	return true
 }
