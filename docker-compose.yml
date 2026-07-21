@@ -25,8 +25,11 @@ services:
     environment:
       AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
       AIRFLOW__CORE__LOAD_EXAMPLES: "false"
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
     volumes:
+      - airflow_data:/opt/airflow
       - ./airflow/dags:/opt/airflow/dags
+      - ./bin:/opt/airflow/bin
     depends_on:
       - db
     networks:
@@ -34,6 +37,9 @@ services:
 
 volumes:
   flood_db_data:
+    driver: local
+  airflow_data:
+    driver: local
 
 networks:
   my-network:

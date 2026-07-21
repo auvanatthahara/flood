@@ -10,5 +10,5 @@ with DAG(
 ) as dag:
     task1 = BashOperator(
         task_id="task1",
-        bash_command='echo "Task 1 executed"',
+        bash_command="/opt/airflow/bin/ingest",
     )

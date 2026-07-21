@@ -6,6 +6,9 @@ STRUCTURE.md
 # Scratch / local-only files
 scratch/
 
+# Airflow credentials
+airflow/simple_auth_manager_passwords.json
+
 # Go
 bin/
 *.exe
