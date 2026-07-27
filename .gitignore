@@ -1,7 +1,8 @@
 # Claude / AI assistant files
-CLAUDE.md
-STRUCTURE.md
 .claude/
+
+# Docs / dev notes (local only)
+docs/
 
 # Scratch / local-only files
 scratch/
