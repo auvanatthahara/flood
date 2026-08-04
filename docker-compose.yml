@@ -12,6 +12,35 @@ services:
       - flood_db_data:/var/lib/postgresql/data
       - ./db/migrations:/docker-entrypoint-initdb.d
     restart: unless-stopped
+    networks:
+      - my-network
+
+  airflow:
+    container_name: airflow_container
+    image: apache/airflow:3.2.2
+    command: >
+      bash -c "airflow db migrate && airflow standalone"
+    ports:
+      - "8080:8080"
+    environment:
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+      AIRFLOW__CORE__LOAD_EXAMPLES: "false"
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+    volumes:
+      - airflow_data:/opt/airflow
+      - ./airflow/dags:/opt/airflow/dags
+      - ./bin:/opt/airflow/bin
+    depends_on:
+      - db
+    networks:
+      - my-network
 
 volumes:
   flood_db_data:
+    driver: local
+  airflow_data:
+    driver: local
+
+networks:
+  my-network:
+    driver: bridge

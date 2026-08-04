@@ -1,6 +1,14 @@
 # Claude / AI assistant files
-CLAUDE.md
 .claude/
+
+# Docs / dev notes (local only)
+docs/
+
+# Scratch / local-only files
+scratch/
+
+# Airflow credentials
+airflow/simple_auth_manager_passwords.json
 
 # Go
 bin/
@@ -20,6 +28,10 @@ Thumbs.db
 # IDE
 .vscode/
 .idea/
+
+# Node
+node_modules/
+frontend/dist/
 
 # Misc
 *.tar.gz
