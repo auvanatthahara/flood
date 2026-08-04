@@ -29,6 +29,10 @@ Thumbs.db
 .vscode/
 .idea/
 
+# Node
+node_modules/
+frontend/dist/
+
 # Misc
 *.tar.gz
 *.zip
