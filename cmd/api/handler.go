@@ -5,24 +5,21 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-// FloodReport is the DTO — defines what the API returns as JSON
-// *int and *string are pointers, meaning the field can be nil (like Java's Integer vs int)
-// the backtick tags tell the JSON encoder what key name to use (like @JsonProperty)
 type FloodReport struct {
 	ID          string    `json:"id"`
 	Source      string    `json:"source"`
 	CreatedAt   time.Time `json:"created_at"`
-	Status      string  `json:"status"`
-	FloodDepth  *int    `json:"flood_depth"`
-	City        string  `json:"city"`
-	RegionCode  string  `json:"region_code"`
-	LocalAreaID *string `json:"local_area_id"`
-	Longitude   float64 `json:"longitude"`
-	Latitude    float64 `json:"latitude"`
-	RawText     *string `json:"raw_text"`
+	Status      string    `json:"status"`
+	FloodDepth  *int      `json:"flood_depth"`
+	City        string    `json:"city"`
+	RegionCode  string    `json:"region_code"`
+	LocalAreaID *string   `json:"local_area_id"`
+	Longitude   float64   `json:"longitude"`
+	Latitude    float64   `json:"latitude"`
+	RawText     *string   `json:"raw_text"`
 }
 
 type RegionCount struct {
@@ -37,14 +34,10 @@ type Stats struct {
 	TopRegions     []RegionCount `json:"top_regions"`
 }
 
-// Handler holds shared dependencies (the DB connection) for all endpoint functions
-// equivalent to a Spring @Controller that has a @Repository injected into it
 type Handler struct {
-	db *pgx.Conn
+	db *pgxpool.Pool
 }
 
-// handleEvents handles GET /events — returns all flood reports ordered by date
-// w is where you write the response, r is the incoming request
 func (h *Handler) handleEvents(w http.ResponseWriter, r *http.Request) {
 	rows, err := h.db.Query(r.Context(), `
 		SELECT id, source, created_at, status, flood_depth,
@@ -53,18 +46,14 @@ func (h *Handler) handleEvents(w http.ResponseWriter, r *http.Request) {
 		ORDER BY created_at DESC
 	`)
 	if err != nil {
-		// http.Error writes the message + status code and returns — like throwing an exception
 		http.Error(w, "Failed to query database", http.StatusInternalServerError)
 		return
 	}
-	// always close the result set when done, same as closing a JDBC ResultSet
 	defer rows.Close()
 
 	var reports []FloodReport
 	for rows.Next() {
 		var rep FloodReport
-		// Scan reads one row into the struct fields — order must match the SELECT columns
-		// & means "address of" — you pass a pointer so Scan can write into the variable
 		err := rows.Scan(
 			&rep.ID, &rep.Source, &rep.CreatedAt, &rep.Status, &rep.FloodDepth,
 			&rep.City, &rep.RegionCode, &rep.LocalAreaID, &rep.Longitude, &rep.Latitude,
@@ -74,12 +63,10 @@ func (h *Handler) handleEvents(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Failed to read row", http.StatusInternalServerError)
 			return
 		}
-		// append adds to the slice — equivalent to List.add() in Java
 		reports = append(reports, rep)
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	// serialize the slice to JSON and write it directly to the response
 	json.NewEncoder(w).Encode(reports)
 }
 
@@ -154,4 +141,17 @@ func (h *Handler) handleStats(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(stats)
+}
+
+func corsMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+		if r.Method == "OPTIONS" {
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+		next.ServeHTTP(w, r)
+	})
 }

@@ -6,30 +6,29 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 func main() {
-	// context.Background() is the root context — required by pgx for DB operations
 	ctx := context.Background()
+	pool, err := pgxpool.New(ctx, os.Getenv("DATABASE_URL"))
 
-	// connect to DB once and reuse the connection for all requests
-	conn, err := pgx.Connect(ctx, os.Getenv("DATABASE_URL"))
 	if err != nil {
 		fmt.Println("Error connecting to database:", err)
 		return
 	}
-	// close the DB connection when main() exits (i.e. when the server shuts down)
-	defer conn.Close(ctx)
+	defer pool.Close()
 
-	// manual dependency injection — pass the DB connection into the Handler
-	h := &Handler{db: conn}
+	h := &Handler{db: pool}
+	// create a new ServeMux (router) and register the handler functions for each endpoint
+	mux := http.NewServeMux()
+	mux.HandleFunc("GET /events", h.handleEvents)
+	mux.HandleFunc("GET /events/region/{region_code}", h.handleEventsByRegion)
+	mux.HandleFunc("GET /stats", h.handleStats)
 
-	// register routes: "METHOD /path" syntax requires Go 1.22+
-	http.HandleFunc("GET /events", h.handleEvents)
-	http.HandleFunc("GET /events/region/{region_code}", h.handleEventsByRegion)
-	http.HandleFunc("GET /stats", h.handleStats)
+	// wrap the mux with CORS middleware to allow cross-origin requests from the frontend
+	cors := corsMiddleware(mux)
 
-	fmt.Println("Server running on :8080")
-	http.ListenAndServe(":8080", nil)
+	fmt.Println("Server running on :8000")
+	http.ListenAndServe(":8000", cors)
 }
