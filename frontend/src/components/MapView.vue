@@ -1,10 +1,15 @@
 <script setup>
-import { onMounted } from 'vue'
+import { ref, onMounted } from 'vue'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import { useFloodReports } from '../composables/useFloodReports'
+import { useNominatim } from '../composables/useNominatim'
+import FloodSidebar from './FloodSidebar.vue'
 
 const { fetchAll } = useFloodReports()
+const { reverseGeocode } = useNominatim()
+
+const selectedReport = ref(null)
 
 const greenIcon = new L.Icon({
     iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-green.png',
@@ -15,19 +20,28 @@ const greenIcon = new L.Icon({
     shadowSize: [41, 41]
 })
 
+const onMarkerClick = async (report) => {
+    const street = await reverseGeocode(report.latitude, report.longitude)
+    selectedReport.value = { ...report, street }
+}
+
 onMounted(() => {
-    const map = L.map('map').setView([-6.2, 106.8], 11)
+    const map = L.map('map').setView([-6.1754, 106.8272], 12)
     const corner1 = L.latLng(-6.074000, 106.682000)
     const corner2 = L.latLng(-6.398333, 106.971667)
     const bounds = L.latLngBounds(corner1, corner2)
 
+    map.setMaxBounds(bounds)
+    map.setMinZoom(12)
+    map.setMaxZoom(18)
+
     fetchAll().then(reports => {
         reports.forEach(report => {
-            L.marker([report.latitude, report.longitude], { icon: greenIcon }).addTo(map)
+            const marker = L.marker([report.latitude, report.longitude], { icon: greenIcon }).addTo(map)
+            marker.on('click', () => onMarkerClick(report))
         })
     })
 
-    map.setMaxBounds(bounds)
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '© OpenStreetMap contributors'
     }).addTo(map)
@@ -35,12 +49,21 @@ onMounted(() => {
 </script>
 
 <template>
-    <div id="map"></div>
+    <div class="map-container">
+        <div id="map"></div>
+        <FloodSidebar :report="selectedReport" />
+    </div>
 </template>
 
 <style scoped>
-#map {
+.map-container {
+    position: relative;
     width: 100%;
     height: 100vh;
+}
+
+#map {
+    width: 100%;
+    height: 100%;
 }
 </style>
