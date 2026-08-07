@@ -51,7 +51,7 @@ onMounted(() => {
 <template>
     <div class="map-container">
         <div id="map"></div>
-        <FloodSidebar :report="selectedReport" />
+        <FloodSidebar :report="selectedReport" @close="selectedReport = null" />
     </div>
 </template>
 
